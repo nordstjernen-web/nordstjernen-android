@@ -147,9 +147,27 @@ jobs:
             else
               echo "::error::libcurl.so does not link libbrotlidec"; exit 1
             fi
-            # Verify the 16 KB page-size flag took effect on a representative lib.
-            readelf -lW "${PREFIX}/lib/libcurl.so" | grep -q 'LOAD' && \
-              echo "libcurl.so program headers present"
+            # Every shipped .so must have 16 KB-aligned LOAD segments, or it
+            # will fail to load on Android 15+ devices with 16 KB pages (a hard
+            # Google Play requirement and the whole point of the
+            # -Wl,-z,max-page-size=16384 plumbing). A single dep that drops
+            # LDFLAGS would otherwise ship mis-aligned and pass every other
+            # check, so assert the alignment of each LOAD segment in each lib
+            # rather than spot-checking one. (mawk on the runner has no
+            # strtonum, so convert the hex Align column in bash arithmetic.)
+            fail=0
+            for lib in "${PREFIX}/lib/"*.so; do
+              base="$(basename "${lib}")"
+              while read -r align; do
+                [ -n "${align}" ] || continue
+                if [ "$(( align ))" -lt 16384 ]; then
+                  echo "::error::${base} has a LOAD segment aligned to ${align} (<16 KB)"
+                  fail=1
+                fi
+              done < <(readelf -lW "${lib}" | awk '$1 == "LOAD" { print $NF }')
+            done
+            [ "${fail}" -eq 0 ] || { echo "::error::one or more libraries are not 16 KB page-aligned"; exit 1; }
+            echo "ok   all $(ls -1 "${PREFIX}/lib/"*.so | wc -l) libraries have >=16 KB-aligned LOAD segments"
           fi
 
       - name: Stage artifact tree
