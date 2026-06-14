@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-# Download the prebuilt Android dependency sysroot produced by the
-# "build-deps" GitHub Actions workflow and lay it out so that nordstjernen's
+# Download the prebuilt Android dependency sysroot published by the "build-deps"
+# GitHub Actions workflow as a public Release, and lay it out so nordstjernen's
 # android/scripts/build-deps.sh can consume it via $NORDSTJERNEN_ANDROID_SYSROOT.
 #
-# The CI workflow uploads one artifact per ABI named
-#   nordstjernen-android-sysroot-<abi>
-# each containing a top-level <abi>/ directory (include/, lib/, lib/pkgconfig/).
-# After running this script the layout is:
+# Release assets (under the rolling tag, default 'sysroot-latest'):
+#   nordstjernen-android-sysroot-<abi>.tar.gz   # each contains a top-level <abi>/
+#   SHA256SUMS                                  # checksums for verification
+#   manifest.txt                                # pinned versions that were built
+#
+# These are public, so no authentication (and no `gh` CLI) is required -- just
+# curl, tar and sha256sum. After running, the layout is:
 #   $SYSROOT/arm64-v8a/{include,lib,lib/pkgconfig}
-#   $SYSROOT/armeabi-v7a/...
-#   ...
+#   $SYSROOT/armeabi-v7a/...  (etc.)
 #
 # Usage:
 #   fetch-prebuilt-deps.sh [options]
@@ -17,12 +19,7 @@
 #                       or android/sysroot)
 #     --abi ABI         download only one ABI (default: all four)
 #     --repo OWNER/REPO GitHub repo (default: nordstjernen-web/nordstjernen-android)
-#     --run-id ID       download artifacts from a specific workflow run
-#                       (default: latest successful run on the default branch)
-#     --branch NAME     branch to pick the latest run from (default: main)
-#
-# Requires the GitHub CLI (`gh`, authenticated) which knows how to fetch
-# Actions artifacts. Install: https://cli.github.com/
+#     --tag TAG         release tag to download (default: sysroot-latest)
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,58 +27,52 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
 REPO="nordstjernen-web/nordstjernen-android"
-WORKFLOW="build-deps.yml"
+TAG="sysroot-latest"
 SYSROOT_BASE="${NORDSTJERNEN_ANDROID_SYSROOT:-${ANDROID_DIR}/sysroot}"
 ABIS=("${ALL_ABIS[@]}")
-RUN_ID=""
-BRANCH="main"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --sysroot) SYSROOT_BASE="$2"; shift 2 ;;
     --abi)     ABIS=("$2"); shift 2 ;;
     --repo)    REPO="$2"; shift 2 ;;
-    --run-id)  RUN_ID="$2"; shift 2 ;;
-    --branch)  BRANCH="$2"; shift 2 ;;
+    --tag)     TAG="$2"; shift 2 ;;
     -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
     *) die "unknown option: $1" ;;
   esac
 done
 
-command -v gh >/dev/null 2>&1 || die "the GitHub CLI 'gh' is required (https://cli.github.com/)"
+command -v curl       >/dev/null 2>&1 || die "curl is required"
+command -v sha256sum   >/dev/null 2>&1 || die "sha256sum is required"
 
-if [ -z "${RUN_ID}" ]; then
-  log "Resolving latest successful '${WORKFLOW}' run on ${REPO}@${BRANCH}"
-  RUN_ID="$(gh run list --repo "${REPO}" --workflow "${WORKFLOW}" \
-            --branch "${BRANCH}" --status success --limit 1 \
-            --json databaseId --jq '.[0].databaseId')"
-  [ -n "${RUN_ID}" ] && [ "${RUN_ID}" != "null" ] || die "no successful run found"
-fi
-log "Using workflow run ${RUN_ID}"
-
+BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
 mkdir -p "${SYSROOT_BASE}"
 tmp="$(mktemp -d)"
 trap 'rm -rf "${tmp}"' EXIT
 
+UA="nordstjernen-android-deps/1.0 (+https://github.com/${REPO})"
+dl() { curl -fsSL --retry 4 --retry-delay 2 -A "${UA}" -o "$2" "$1"; }
+
+log "Downloading checksum manifest from ${TAG}"
+dl "${BASE_URL}/SHA256SUMS" "${tmp}/SHA256SUMS" \
+  || die "could not fetch SHA256SUMS from release '${TAG}' (does it exist yet?)"
+
 for abi in "${ABIS[@]}"; do
   is_valid_abi "${abi}" || die "invalid ABI: ${abi}"
-  local_art="nordstjernen-android-sysroot-${abi}"
-  log "Downloading artifact ${local_art}"
-  rm -rf "${tmp:?}/${abi}"; mkdir -p "${tmp}/${abi}"
-  gh run download "${RUN_ID}" --repo "${REPO}" \
-    --name "${local_art}" --dir "${tmp}/${abi}"
+  asset="nordstjernen-android-sysroot-${abi}.tar.gz"
+  log "Downloading ${asset}"
+  dl "${BASE_URL}/${asset}" "${tmp}/${asset}" || die "download failed for ${asset}"
 
-  # Artifact contains a top-level <abi>/ dir; sync it into the sysroot base.
-  if [ -d "${tmp}/${abi}/${abi}" ]; then
-    rm -rf "${SYSROOT_BASE:?}/${abi}"
-    mkdir -p "${SYSROOT_BASE}/${abi}"
-    cp -a "${tmp}/${abi}/${abi}/." "${SYSROOT_BASE}/${abi}/"
-  else
-    # Fallback: artifact was flattened; copy its contents directly.
-    rm -rf "${SYSROOT_BASE:?}/${abi}"
-    mkdir -p "${SYSROOT_BASE}/${abi}"
-    cp -a "${tmp}/${abi}/." "${SYSROOT_BASE}/${abi}/"
-  fi
+  # Verify against the published SHA256SUMS (entries are like "./<asset>").
+  want="$(awk -v f="${asset}" '$2 ~ ("(^|/)" f "$") {print $1}' "${tmp}/SHA256SUMS" | head -1)"
+  [ -n "${want}" ] || die "no checksum for ${asset} in SHA256SUMS"
+  echo "${want}  ${tmp}/${asset}" | sha256sum -c - >/dev/null \
+    || die "checksum mismatch for ${asset}"
+
+  rm -rf "${SYSROOT_BASE:?}/${abi}"
+  # Tarball carries a top-level <abi>/ dir, so extract straight into the base.
+  tar -xzf "${tmp}/${asset}" -C "${SYSROOT_BASE}"
+  [ -d "${SYSROOT_BASE}/${abi}/lib" ] || die "unexpected archive layout for ${abi}"
   log "Installed ${abi} -> ${SYSROOT_BASE}/${abi}"
 done
 
