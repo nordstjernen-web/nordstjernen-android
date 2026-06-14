@@ -142,7 +142,17 @@ dep_fribidi() {
 
 dep_pixman() {
   local s; s="$(fetch_source pixman)"
-  build_meson "${s}" -Dtests=disabled -Dgtk=disabled -Dlibpng=enabled
+  local extra=()
+  # 32-bit ARM: pixman's NEON runtime detection (pixman-arm.c) includes the
+  # NDK's <cpu-features.h> (android_getCpuFamily/Features), which is not on the
+  # default sysroot include path. pixman's cpu-features-path option compiles the
+  # NDK helper straight into the library. arm64/x86/x86_64 don't hit this path.
+  if [ "${CURRENT_ABI}" = "armeabi-v7a" ]; then
+    local cf="${ANDROID_NDK_HOME}/sources/android/cpufeatures"
+    [ -f "${cf}/cpu-features.c" ] || die "NDK cpufeatures helper not found at ${cf}"
+    extra+=(-Dcpu-features-path="${cf}")
+  fi
+  build_meson "${s}" -Dtests=disabled -Dgtk=disabled -Dlibpng=enabled "${extra[@]}"
 }
 
 dep_fontconfig() {

@@ -185,9 +185,11 @@ fetch_source() {
   if [ ! -f "${file}" ] || ! echo "${sha}  ${file}" | sha256sum -c - >/dev/null 2>&1; then
     log "Downloading ${name} ${DEP_VERSION[$name]} from ${url}"
     # A real User-Agent avoids 4xx from picky upstreams (some reject curl's
-    # default UA). Fail loudly here so a download error is not later misreported
-    # as a checksum mismatch.
-    if ! curl -fsSL --retry 4 --retry-delay 2 \
+    # default UA). --retry-all-errors retries non-transient HTTP codes too
+    # (e.g. freedesktop.org intermittently 418s under parallel load), which
+    # curl's plain --retry would otherwise not retry. Fail loudly here so a
+    # download error is not later misreported as a checksum mismatch.
+    if ! curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors \
               -A "nordstjernen-android-deps/1.0 (+https://github.com/nordstjernen-web/nordstjernen-android)" \
               -o "${file}.tmp" "${url}"; then
       rm -f "${file}.tmp"
