@@ -1,0 +1,12 @@
+# Generated Meson cross-files (produced by android/scripts/gen-cross-files.sh;
+# they embed absolute, machine-specific NDK and sysroot paths).
+/android/cross/*.cross
+
+# Build scratch and download cache.
+/android/.build/
+/android/.cache/
+
+# Installed sysroots / packaged artifacts.
+/android/sysroot/
+/sysroot/
+/artifact/
