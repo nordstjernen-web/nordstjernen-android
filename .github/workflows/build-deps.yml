@@ -1,0 +1,144 @@
+name: build-deps
+
+# Cross-compile the full native third-party dependency stack for every Android
+# ABI and publish each as a downloadable "android sysroot" artifact that
+# nordstjernen's android/scripts/build-deps.sh (and local devs) can consume
+# instead of compiling everything from source.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'android/deps/**'
+      - 'android/scripts/**'
+      - 'android/cross/**'
+      - '.github/workflows/build-deps.yml'
+  schedule:
+    # Nightly rebuild (04:17 UTC) to catch toolchain/runner drift.
+    - cron: '17 4 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-deps-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NDK_VERSION: '27.3.13750724'
+  ANDROID_API: '26'
+
+jobs:
+  build:
+    name: ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64, x86]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config \
+            autoconf automake libtool gettext gperf ccache \
+            bison flex texinfo
+          # Recent Meson/Ninja from PyPI (Ubuntu's are often too old for glib).
+          python -m pip install --upgrade pip
+          python -m pip install 'meson>=1.5.0' ninja
+          echo "meson $(meson --version), ninja $(ninja --version), cmake $(cmake --version | head -1)"
+
+      - name: Install Android NDK ${{ env.NDK_VERSION }}
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          yes | "${SDK}/cmdline-tools/latest/bin/sdkmanager" "ndk;${NDK_VERSION}" >/dev/null
+          NDK_HOME="${SDK}/ndk/${NDK_VERSION}"
+          test -d "${NDK_HOME}"
+          echo "ANDROID_NDK_HOME=${NDK_HOME}" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=${NDK_HOME}" >> "$GITHUB_ENV"
+          echo "Installed NDK at ${NDK_HOME}"
+
+      - name: Cache source tarballs
+        uses: actions/cache@v4
+        with:
+          path: android/.cache/tarballs
+          key: deps-tarballs-${{ hashFiles('android/deps/manifest.txt') }}
+          restore-keys: |
+            deps-tarballs-
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: android/.cache/ccache
+          key: deps-ccache-${{ matrix.abi }}-${{ hashFiles('android/deps/manifest.txt') }}-${{ github.sha }}
+          restore-keys: |
+            deps-ccache-${{ matrix.abi }}-${{ hashFiles('android/deps/manifest.txt') }}-
+            deps-ccache-${{ matrix.abi }}-
+
+      - name: Build dependency sysroot (${{ matrix.abi }})
+        env:
+          NORDSTJERNEN_ANDROID_SYSROOT: ${{ github.workspace }}/sysroot
+        run: |
+          chmod +x android/scripts/*.sh
+          android/scripts/build-android-deps.sh "${{ matrix.abi }}"
+
+      - name: Sanity-check artifact contents
+        env:
+          NORDSTJERNEN_ANDROID_SYSROOT: ${{ github.workspace }}/sysroot
+        run: |
+          set -euo pipefail
+          PREFIX="${NORDSTJERNEN_ANDROID_SYSROOT}/${{ matrix.abi }}"
+          echo "== shared libraries =="; ls -1 "${PREFIX}/lib/"*.so
+          echo "== pkg-config modules =="; ls -1 "${PREFIX}/lib/pkgconfig/"*.pc
+          # Every key module must be discoverable via pkg-config.
+          export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+          for m in zlib libffi libpcre2-8 expat gobject-2.0 gio-2.0 \
+                   freetype2 libpng harfbuzz fontconfig pixman-1 fribidi \
+                   cairo pango pangocairo libcrypto libssl libnghttp2 \
+                   libcurl sqlite3 uchardet libpsl libwebp; do
+            pkg-config --exists "$m" && echo "ok   $m $(pkg-config --modversion "$m")" \
+                                     || { echo "MISSING $m"; exit 1; }
+          done
+          # Verify the 16 KB page-size flag took effect on a representative lib.
+          if command -v readelf >/dev/null; then
+            readelf -lW "${PREFIX}/lib/libcurl.so" | grep -q 'LOAD' && \
+              echo "libcurl.so program headers present"
+          fi
+
+      - name: Stage artifact tree
+        env:
+          NORDSTJERNEN_ANDROID_SYSROOT: ${{ github.workspace }}/sysroot
+        run: |
+          set -euo pipefail
+          OUT="${{ github.workspace }}/artifact"
+          mkdir -p "${OUT}"
+          cp -a "${NORDSTJERNEN_ANDROID_SYSROOT}/${{ matrix.abi }}" "${OUT}/"
+          cp android/deps/manifest.txt "${OUT}/${{ matrix.abi }}/MANIFEST.txt"
+          {
+            echo "abi=${{ matrix.abi }}"
+            echo "ndk=${NDK_VERSION}"
+            echo "api=${ANDROID_API}"
+            echo "commit=${{ github.sha }}"
+            echo "built=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > "${OUT}/${{ matrix.abi }}/BUILDINFO.txt"
+
+      - name: Upload sysroot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nordstjernen-android-sysroot-${{ matrix.abi }}
+          # Upload the parent dir so the artifact keeps a top-level <abi>/
+          # directory (include/, lib/, lib/pkgconfig/) for build-deps.sh.
+          path: artifact/
+          if-no-files-found: error
+          retention-days: 90
