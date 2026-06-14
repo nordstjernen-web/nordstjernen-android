@@ -22,7 +22,7 @@ binaries instead of compiling the world.
 |----------------|--------------------------------------------------|
 | NDK            | `27.3.13750724` (r27)                            |
 | ABIs           | `arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86`      |
-| API / minSdk   | `28`                                             |
+| API / minSdk   | `35`                                             |
 | Page size      | every link passes `-Wl,-z,max-page-size=16384` (16 KB pages, Google Play) |
 | Build systems  | Meson + Ninja + pkg-config, CMake ≥ 3.22 where required |
 

@@ -89,6 +89,14 @@ dep_expat() {
 
 dep_glib() {
   local s; s="$(fetch_source glib)"
+  # Android bionic ships no gettext/libintl, so glib falls back to its bundled
+  # proxy-libintl meson subproject. Wrap downloading is disabled
+  # (--wrap-mode nodownload, for offline/reproducible builds), so vendor the
+  # pinned proxy-libintl source into glib's subprojects/ under the exact
+  # directory name its .wrap expects (proxy-libintl-0.5).
+  local intl; intl="$(fetch_source proxy-libintl)"
+  rm -rf "${s}/subprojects/proxy-libintl-0.5"
+  cp -a "${intl}" "${s}/subprojects/proxy-libintl-0.5"
   build_meson "${s}" \
     -Dtests=false -Dglib_assert=false -Dglib_checks=false \
     -Dintrospection=disabled -Dnls=disabled -Dman-pages=disabled \

@@ -4,7 +4,7 @@
 #
 # Conventions:
 #   ABI       one of: arm64-v8a armeabi-v7a x86_64 x86
-#   API       Android API level / minSdk (default 28)
+#   API       Android API level / minSdk (default 35)
 #   NDK r27   toolchains/llvm/prebuilt/<host>/bin
 #
 # Every link step must pass -Wl,-z,max-page-size=16384 (16 KB pages, required
@@ -21,7 +21,7 @@ fi
 # Constants
 # ---------------------------------------------------------------------------
 ALL_ABIS=(arm64-v8a armeabi-v7a x86_64 x86)
-ANDROID_API="${ANDROID_API:-28}"
+ANDROID_API="${ANDROID_API:-35}"
 NDK_VERSION_EXPECTED="27.3.13750724"
 PAGE_SIZE_LDFLAG="-Wl,-z,max-page-size=16384"
 # Bionic has no _init/_fini, but many GNU-style version scripts localize them;

@@ -25,6 +25,12 @@ expat       2.8.1     10b195ee78160a908388180a8fe3603d4e9a12f4755fbf5f3816b23a9d
 
 # --- GLib stack -------------------------------------------------------------
 glib        2.88.1    51ab804c56f6eab3e5045c774d1290ac5e4c923d4f9a3d8e33123bee45c1840e  https://download.gnome.org/sources/glib/2.88/glib-2.88.1.tar.xz
+# proxy-libintl is not a standalone sysroot library: Android bionic ships no
+# gettext, so glib uses its bundled proxy-libintl meson subproject for libintl.
+# We vendor the pinned source into glib's subprojects/ (see dep_glib) because
+# meson wrap downloading is disabled. Version/hash match glib's
+# subprojects/proxy-libintl.wrap (directory = proxy-libintl-0.5).
+proxy-libintl 0.5    f7a1cbd7579baaf575c66f9d99fb6295e9b0684a28b095967cfda17857595303  https://github.com/frida/proxy-libintl/archive/refs/tags/0.5.tar.gz
 
 # --- Text / font ------------------------------------------------------------
 freetype    2.14.3    36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f  https://downloads.sourceforge.net/project/freetype/freetype2/2.14.3/freetype-2.14.3.tar.xz
