@@ -28,6 +28,6 @@ Then point the engine's build at `$NORDSTJERNEN_ANDROID_SYSROOT` and run
 release by CI on every successful build of `main`.
 
 - **Targets:** NDK `27.3.13750724` (r27); ABIs `arm64-v8a`, `armeabi-v7a`,
-  `x86_64`, `x86`; minSdk 26; 16 KB page size.
+  `x86_64`, `x86`; minSdk 28; 16 KB page size.
 - **Pinned versions + checksums:** [`android/deps/manifest.txt`](android/deps/manifest.txt).
 - **CI:** [`.github/workflows/build-deps.yml`](.github/workflows/build-deps.yml).
