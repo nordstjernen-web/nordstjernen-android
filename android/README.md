@@ -33,7 +33,8 @@ Pinned versions and verified checksums live in
 order:
 
 - **Base:** zlib, libffi, pcre2, expat
-- **GLib stack:** glib (glib-2.0, gobject-2.0, gio-2.0, gmodule-2.0)
+- **GLib stack:** glib (glib-2.0, gobject-2.0, gio-2.0, gmodule-2.0), plus
+  glib's bundled `proxy-libintl` meson subproject for `libintl` (see note below)
 - **Text / font:** freetype2, libpng, harfbuzz, fontconfig, pixman, fribidi
   (freetype↔harfbuzz is a cycle: freetype is built once *without* harfbuzz,
   then harfbuzz, then freetype is rebuilt *with* harfbuzz)
@@ -43,6 +44,23 @@ order:
 
 > `lexbor`, `quickjs-ng`, `WAMR` and `Wuffs` are **not** built here — they are
 > vendored in the engine tree and compiled together with the engine.
+
+### Android libc (bionic) notes
+
+The `API / minSdk` level above is not arbitrary — glib drags in two libc
+features that Android's bionic only provides on newer API levels:
+
+- **`iconv`** — `iconv_open`/`iconv`/`iconv_close` were added to bionic at
+  **API 28**. Below that, glib's meson configure aborts with
+  `Dependency "iconv" not found`.
+- **`libintl` / gettext** — bionic ships **no** gettext at any API level. glib
+  always needs `libintl`, so it falls back to its bundled **`proxy-libintl`**
+  meson subproject (a tiny stub that satisfies the gettext symbols). Because
+  these builds run meson with `--wrap-mode nodownload` (offline / reproducible),
+  the pinned `proxy-libintl` source is **vendored into glib's
+  `subprojects/proxy-libintl-0.5/`** by `dep_glib` before configuring, rather
+  than downloaded from wrapdb. Its version and sha256 are pinned in
+  `deps/manifest.txt` and match glib's own `subprojects/proxy-libintl.wrap`.
 
 ## Consuming the prebuilt sysroot (the fast path)
 
