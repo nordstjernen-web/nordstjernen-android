@@ -62,9 +62,14 @@ jobs:
         run: |
           set -euo pipefail
           SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
-          yes | "${SDK}/cmdline-tools/latest/bin/sdkmanager" "ndk;${NDK_VERSION}" >/dev/null
+          SDKMANAGER="${SDK}/cmdline-tools/latest/bin/sdkmanager"
+          # `yes | sdkmanager` races: sdkmanager closes the pipe early, so `yes`
+          # dies with a broken pipe and trips `pipefail`. Guard both calls with
+          # `|| true` and use the install-dir check below as the real gate.
+          (yes 2>/dev/null | "${SDKMANAGER}" --licenses >/dev/null 2>&1) || true
+          (yes 2>/dev/null | "${SDKMANAGER}" "ndk;${NDK_VERSION}" >/dev/null 2>&1) || true
           NDK_HOME="${SDK}/ndk/${NDK_VERSION}"
-          test -d "${NDK_HOME}"
+          test -d "${NDK_HOME}" || { echo "::error::NDK ${NDK_VERSION} install failed"; exit 1; }
           echo "ANDROID_NDK_HOME=${NDK_HOME}" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_ROOT=${NDK_HOME}" >> "$GITHUB_ENV"
           echo "Installed NDK at ${NDK_HOME}"
