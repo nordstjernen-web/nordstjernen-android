@@ -16,13 +16,16 @@ to rebuild it locally.
 ## Quick start
 
 ```bash
-# Download the prebuilt sysroot for all ABIs (needs the `gh` CLI):
+# Download the prebuilt sysroot for all ABIs from the public GitHub Release
+# (no auth / no `gh` needed -- just curl + tar + sha256sum):
 export NORDSTJERNEN_ANDROID_SYSROOT="$HOME/.cache/nordstjernen-android-sysroot"
 android/scripts/fetch-prebuilt-deps.sh --sysroot "$NORDSTJERNEN_ANDROID_SYSROOT"
 ```
 
 Then point the engine's build at `$NORDSTJERNEN_ANDROID_SYSROOT` and run
-`build-deps.sh` as usual.
+`build-deps.sh` as usual. The sysroots are published as assets on the rolling
+[`sysroot-latest`](https://github.com/nordstjernen-web/nordstjernen-android/releases/tag/sysroot-latest)
+release by CI on every successful build of `main`.
 
 - **Targets:** NDK `27.3.13750724` (r27); ABIs `arm64-v8a`, `armeabi-v7a`,
   `x86_64`, `x86`; minSdk 26; 16 KB page size.

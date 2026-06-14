@@ -46,21 +46,34 @@ order:
 
 ## Consuming the prebuilt sysroot (the fast path)
 
-1. **Download** the artifacts produced by the latest successful `build-deps`
-   workflow run and lay them out into a sysroot:
+Successful builds on `main` publish the sysroots as assets on a **public GitHub
+Release** under the rolling tag
+[`sysroot-latest`](https://github.com/nordstjernen-web/nordstjernen-android/releases/tag/sysroot-latest):
+
+```
+nordstjernen-android-sysroot-arm64-v8a.tar.gz
+nordstjernen-android-sysroot-armeabi-v7a.tar.gz
+nordstjernen-android-sysroot-x86_64.tar.gz
+nordstjernen-android-sysroot-x86.tar.gz
+SHA256SUMS
+manifest.txt
+```
+
+Because the release is public, no authentication (and no `gh` CLI) is needed —
+just `curl`, `tar` and `sha256sum`.
+
+1. **Download** and lay the sysroots out (downloads all four ABIs and verifies
+   each against `SHA256SUMS`):
 
    ```bash
    export NORDSTJERNEN_ANDROID_SYSROOT="$HOME/.cache/nordstjernen-android-sysroot"
    android/scripts/fetch-prebuilt-deps.sh --sysroot "$NORDSTJERNEN_ANDROID_SYSROOT"
    ```
 
-   This uses the [GitHub CLI](https://cli.github.com/) (`gh`, authenticated) to
-   pull `nordstjernen-android-sysroot-<abi>` for all four ABIs. Use `--abi` to
-   fetch a single one, or `--run-id <id>` to pin a specific run.
-
-   You can also download an artifact manually from the run's **Summary →
-   Artifacts** page and unzip it so the layout becomes
-   `$NORDSTJERNEN_ANDROID_SYSROOT/<abi>/...`.
+   Use `--abi arm64-v8a` for a single ABI, or `--tag <tag>` to pin a specific
+   release. You can also just download a `*.tar.gz` from the Releases page and
+   `tar -xzf` it into `$NORDSTJERNEN_ANDROID_SYSROOT` (each archive already
+   carries a top-level `<abi>/` directory).
 
 2. **Point the engine build at it** and run the engine's dependency script as
    usual — it will find the prebuilt libraries and skip compilation:
