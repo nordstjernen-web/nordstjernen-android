@@ -165,7 +165,7 @@ dep_openssl() {
     ./Configure "${ABI_OPENSSL_TARGET}" \
       -D__ANDROID_API__="${ANDROID_API}" \
       --prefix="${PREFIX}" --libdir=lib \
-      shared no-tests no-apps "${PAGE_SIZE_LDFLAG}"
+      shared no-tests no-apps "${PAGE_SIZE_LDFLAG}" "${UNDEF_VER_LDFLAG}"
     PATH="${NDK_BIN}:${PATH}" make -j"${NPROC}"
     PATH="${NDK_BIN}:${PATH}" make install_sw install_ssldirs
   )
