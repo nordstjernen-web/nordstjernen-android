@@ -21,7 +21,7 @@ binaries instead of compiling the world.
 | Setting        | Value                                            |
 |----------------|--------------------------------------------------|
 | NDK            | `27.3.13750724` (r27)                            |
-| ABIs           | `arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86`      |
+| ABIs           | `arm64-v8a`, `x86_64`                            |
 | API / minSdk   | `35`                                             |
 | Page size      | every link passes `-Wl,-z,max-page-size=16384` (16 KB pages, Google Play) |
 | Build systems  | Meson + Ninja + pkg-config, CMake ≥ 3.22 where required |
@@ -73,9 +73,7 @@ Release** under the rolling tag
 
 ```
 nordstjernen-android-sysroot-arm64-v8a.tar.gz
-nordstjernen-android-sysroot-armeabi-v7a.tar.gz
 nordstjernen-android-sysroot-x86_64.tar.gz
-nordstjernen-android-sysroot-x86.tar.gz
 SHA256SUMS
 manifest.txt
 ```
@@ -116,9 +114,7 @@ export NORDSTJERNEN_ANDROID_SYSROOT="$PWD/sysroot"
 
 # Build one ABI (repeat for the others, or loop):
 android/scripts/build-android-deps.sh arm64-v8a
-android/scripts/build-android-deps.sh armeabi-v7a
 android/scripts/build-android-deps.sh x86_64
-android/scripts/build-android-deps.sh x86
 ```
 
 Requirements: NDK r27, `meson` (≥ 1.5), `ninja`, `cmake` (≥ 3.22),

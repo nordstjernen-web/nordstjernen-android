@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        abi: [arm64-v8a, armeabi-v7a, x86_64, x86]
+        abi: [arm64-v8a, x86_64]
 
     steps:
       - name: Checkout
@@ -224,7 +224,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+          for abi in arm64-v8a x86_64; do
             d="artifacts/nordstjernen-android-sysroot-${abi}"
             test -d "${d}/${abi}" || { echo "::error::missing sysroot for ${abi}"; exit 1; }
             # Tarball keeps a top-level <abi>/ dir so it extracts directly into
@@ -244,7 +244,7 @@ jobs:
             Prebuilt Android dependency sysroot for the Nordstjernen engine.
 
             - NDK: `${{ env.NDK_VERSION }}`  ·  API/minSdk: `${{ env.ANDROID_API }}`
-            - ABIs: arm64-v8a, armeabi-v7a, x86_64, x86 (16 KB page size)
+            - ABIs: arm64-v8a, x86_64 (16 KB page size)
             - Source commit: `${{ github.sha }}`
             - Pinned versions: see `manifest.txt`; checksums in `SHA256SUMS`.
 

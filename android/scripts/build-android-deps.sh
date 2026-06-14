@@ -6,7 +6,7 @@
 # Usage:
 #   build-android-deps.sh <abi> [--sysroot DIR] [--only name1,name2,...]
 #
-#   <abi>        arm64-v8a | armeabi-v7a | x86_64 | x86
+#   <abi>        arm64-v8a | x86_64
 #   --sysroot    install base (default $NORDSTJERNEN_ANDROID_SYSROOT or
 #                android/sysroot); the prefix becomes <sysroot>/<abi>
 #   --only       build only the listed deps (comma separated) -- for debugging
@@ -142,17 +142,7 @@ dep_fribidi() {
 
 dep_pixman() {
   local s; s="$(fetch_source pixman)"
-  local extra=()
-  # 32-bit ARM: pixman's NEON runtime detection (pixman-arm.c) includes the
-  # NDK's <cpu-features.h> (android_getCpuFamily/Features), which is not on the
-  # default sysroot include path. pixman's cpu-features-path option compiles the
-  # NDK helper straight into the library. arm64/x86/x86_64 don't hit this path.
-  if [ "${CURRENT_ABI}" = "armeabi-v7a" ]; then
-    local cf="${ANDROID_NDK_HOME}/sources/android/cpufeatures"
-    [ -f "${cf}/cpu-features.c" ] || die "NDK cpufeatures helper not found at ${cf}"
-    extra+=(-Dcpu-features-path="${cf}")
-  fi
-  build_meson "${s}" -Dtests=disabled -Dgtk=disabled -Dlibpng=enabled "${extra[@]}"
+  build_meson "${s}" -Dtests=disabled -Dgtk=disabled -Dlibpng=enabled
 }
 
 dep_fontconfig() {
@@ -243,16 +233,6 @@ dep_curl() {
 
 dep_llama() {
   local s; s="$(fetch_source llama)"
-  local extra=()
-  # llamafile's tinyBLAS sgemm path (GGML_LLAMAFILE, forced ON by llama's
-  # top-level CMake) unconditionally uses ARM FP16 NEON load intrinsics
-  # (vld1q_f16/vld1_f16) that 32-bit armv7-a lacks without the fp16 feature, so
-  # it fails to compile there. ggml's other fp16 paths are feature-gated; only
-  # this one is not. Disable llamafile for armeabi-v7a only -- arm64-v8a (native
-  # fp16) and the x86 ABIs (which don't use the NEON path) keep the faster path.
-  if [ "${CURRENT_ABI}" = "armeabi-v7a" ]; then
-    extra+=(-DGGML_LLAMAFILE=OFF)
-  fi
   # Cross-compile libllama + ggml only (no tools/examples/server/tests/app). Pin
   # the cross-unfriendly bits: GGML_NATIVE=OFF (never probe the build host's CPU)
   # and GGML_OPENMP=OFF (bionic ships no libgomp). LLAMA_BUILD_COMMON=OFF drops
@@ -263,8 +243,7 @@ dep_llama() {
     -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF \
     -DLLAMA_BUILD_SERVER=OFF -DLLAMA_BUILD_TOOLS=OFF -DLLAMA_BUILD_COMMON=OFF \
     -DLLAMA_BUILD_APP=OFF \
-    -DGGML_NATIVE=OFF -DGGML_OPENMP=OFF -DGGML_BUILD_TESTS=OFF \
-    "${extra[@]}"
+    -DGGML_NATIVE=OFF -DGGML_OPENMP=OFF -DGGML_BUILD_TESTS=OFF
 }
 
 # Ordered build plan. freetype is built twice to resolve the harfbuzz cycle.

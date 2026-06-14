@@ -11,7 +11,7 @@
 # These are public, so no authentication (and no `gh` CLI) is required -- just
 # curl, tar and sha256sum. After running, the layout is:
 #   $SYSROOT/arm64-v8a/{include,lib,lib/pkgconfig}
-#   $SYSROOT/armeabi-v7a/...  (etc.)
+#   $SYSROOT/x86_64/...  (etc.)
 #
 # Usage:
 #   fetch-prebuilt-deps.sh [options]

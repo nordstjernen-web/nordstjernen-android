@@ -13,7 +13,7 @@ To (re)generate them:
 ```bash
 export ANDROID_NDK_HOME=/path/to/ndk/27.3.13750724
 export NORDSTJERNEN_ANDROID_SYSROOT="$PWD/sysroot"
-android/scripts/gen-cross-files.sh            # all four ABIs
+android/scripts/gen-cross-files.sh            # all ABIs
 android/scripts/gen-cross-files.sh arm64-v8a  # a single ABI
 ```
 

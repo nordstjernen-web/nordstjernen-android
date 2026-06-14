@@ -3,7 +3,7 @@
 # sysroot. Sourced by gen-cross-files.sh and build-android-deps.sh.
 #
 # Conventions:
-#   ABI       one of: arm64-v8a armeabi-v7a x86_64 x86
+#   ABI       one of: arm64-v8a x86_64
 #   API       Android API level / minSdk (default 35)
 #   NDK r27   toolchains/llvm/prebuilt/<host>/bin
 #
@@ -20,7 +20,7 @@ fi
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-ALL_ABIS=(arm64-v8a armeabi-v7a x86_64 x86)
+ALL_ABIS=(arm64-v8a x86_64)
 ANDROID_API="${ANDROID_API:-35}"
 NDK_VERSION_EXPECTED="27.3.13750724"
 PAGE_SIZE_LDFLAG="-Wl,-z,max-page-size=16384"
@@ -110,21 +110,11 @@ set_abi_env() {
       ABI_CLANG_TRIPLE="aarch64-linux-android${ANDROID_API}"
       ABI_CPU_FAMILY="aarch64"; ABI_CPU="aarch64"
       ABI_OPENSSL_TARGET="android-arm64" ;;
-    armeabi-v7a)
-      ABI_TRIPLE="arm-linux-androideabi"
-      ABI_CLANG_TRIPLE="armv7a-linux-androideabi${ANDROID_API}"
-      ABI_CPU_FAMILY="arm"; ABI_CPU="armv7a"
-      ABI_OPENSSL_TARGET="android-arm" ;;
     x86_64)
       ABI_TRIPLE="x86_64-linux-android"
       ABI_CLANG_TRIPLE="x86_64-linux-android${ANDROID_API}"
       ABI_CPU_FAMILY="x86_64"; ABI_CPU="x86_64"
       ABI_OPENSSL_TARGET="android-x86_64" ;;
-    x86)
-      ABI_TRIPLE="i686-linux-android"
-      ABI_CLANG_TRIPLE="i686-linux-android${ANDROID_API}"
-      ABI_CPU_FAMILY="x86"; ABI_CPU="i686"
-      ABI_OPENSSL_TARGET="android-x86" ;;
     *) die "unknown ABI: ${abi}" ;;
   esac
   ABI_ENDIAN="little"
