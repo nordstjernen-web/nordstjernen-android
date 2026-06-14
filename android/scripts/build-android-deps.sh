@@ -243,6 +243,16 @@ dep_curl() {
 
 dep_llama() {
   local s; s="$(fetch_source llama)"
+  local extra=()
+  # llamafile's tinyBLAS sgemm path (GGML_LLAMAFILE, forced ON by llama's
+  # top-level CMake) unconditionally uses ARM FP16 NEON load intrinsics
+  # (vld1q_f16/vld1_f16) that 32-bit armv7-a lacks without the fp16 feature, so
+  # it fails to compile there. ggml's other fp16 paths are feature-gated; only
+  # this one is not. Disable llamafile for armeabi-v7a only -- arm64-v8a (native
+  # fp16) and the x86 ABIs (which don't use the NEON path) keep the faster path.
+  if [ "${CURRENT_ABI}" = "armeabi-v7a" ]; then
+    extra+=(-DGGML_LLAMAFILE=OFF)
+  fi
   # Cross-compile libllama + ggml only (no tools/examples/server/tests/app). Pin
   # the cross-unfriendly bits: GGML_NATIVE=OFF (never probe the build host's CPU)
   # and GGML_OPENMP=OFF (bionic ships no libgomp). LLAMA_BUILD_COMMON=OFF drops
@@ -253,7 +263,8 @@ dep_llama() {
     -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF \
     -DLLAMA_BUILD_SERVER=OFF -DLLAMA_BUILD_TOOLS=OFF -DLLAMA_BUILD_COMMON=OFF \
     -DLLAMA_BUILD_APP=OFF \
-    -DGGML_NATIVE=OFF -DGGML_OPENMP=OFF -DGGML_BUILD_TESTS=OFF
+    -DGGML_NATIVE=OFF -DGGML_OPENMP=OFF -DGGML_BUILD_TESTS=OFF \
+    "${extra[@]}"
 }
 
 # Ordered build plan. freetype is built twice to resolve the harfbuzz cycle.
