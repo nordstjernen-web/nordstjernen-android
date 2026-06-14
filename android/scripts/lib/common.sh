@@ -20,6 +20,13 @@ ALL_ABIS=(arm64-v8a armeabi-v7a x86_64 x86)
 ANDROID_API="${ANDROID_API:-26}"
 NDK_VERSION_EXPECTED="27.3.13750724"
 PAGE_SIZE_LDFLAG="-Wl,-z,max-page-size=16384"
+# Bionic has no _init/_fini, but many GNU-style version scripts localize them;
+# the NDK links with --no-undefined-version --fatal-warnings, turning that into
+# a hard error (seen with pcre2 et al.). Re-allow undefined version-script
+# symbols -- the last of the two flags wins in lld.
+UNDEF_VER_LDFLAG="-Wl,--undefined-version"
+# Flags applied to every link step (CMake / Meson / Autotools / OpenSSL).
+LINK_LDFLAGS="${PAGE_SIZE_LDFLAG} ${UNDEF_VER_LDFLAG}"
 
 # Repository layout (this file lives in android/scripts/lib/).
 COMMON_SH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -216,9 +223,9 @@ build_cmake() {  # build_cmake <srcdir> [extra -D args...]
     -DCMAKE_FIND_ROOT_PATH="${PREFIX}" \
     -DCMAKE_PREFIX_PATH="${PREFIX}" \
     -DBUILD_SHARED_LIBS=ON \
-    -DCMAKE_SHARED_LINKER_FLAGS="${PAGE_SIZE_LDFLAG}" \
-    -DCMAKE_MODULE_LINKER_FLAGS="${PAGE_SIZE_LDFLAG}" \
-    -DCMAKE_EXE_LINKER_FLAGS="${PAGE_SIZE_LDFLAG}" \
+    -DCMAKE_SHARED_LINKER_FLAGS="${LINK_LDFLAGS}" \
+    -DCMAKE_MODULE_LINKER_FLAGS="${LINK_LDFLAGS}" \
+    -DCMAKE_EXE_LINKER_FLAGS="${LINK_LDFLAGS}" \
     "${launcher[@]}" \
     "$@"
   cmake --build "${b}" --parallel "${NPROC}"
@@ -249,7 +256,7 @@ build_autotools() {  # build_autotools <srcdir> [extra ./configure args...]
     CXX="${CC_LAUNCHER:+${CC_LAUNCHER} }${CXX}" \
     CFLAGS="${CFLAGS:-} -fPIC -O2 -DANDROID -D__ANDROID_API__=${ANDROID_API}" \
     CXXFLAGS="${CXXFLAGS:-} -fPIC -O2 -DANDROID -D__ANDROID_API__=${ANDROID_API}" \
-    LDFLAGS="${LDFLAGS:-} ${PAGE_SIZE_LDFLAG}" \
+    LDFLAGS="${LDFLAGS:-} ${LINK_LDFLAGS}" \
     ./configure \
       --host="${ABI_TRIPLE}" \
       --prefix="${PREFIX}" \
