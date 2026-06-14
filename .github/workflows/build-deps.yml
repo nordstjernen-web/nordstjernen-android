@@ -27,6 +27,7 @@ concurrency:
 env:
   NDK_VERSION: '27.3.13750724'
   ANDROID_API: '26'
+  NORDSTJERNEN_ANDROID_VERBOSE: '1'
 
 jobs:
   build:
@@ -95,8 +96,23 @@ jobs:
         env:
           NORDSTJERNEN_ANDROID_SYSROOT: ${{ github.workspace }}/sysroot
         run: |
+          set -euxo pipefail
           chmod +x android/scripts/*.sh
           android/scripts/build-android-deps.sh "${{ matrix.abi }}"
+
+      - name: Upload build logs (${{ matrix.abi }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nordstjernen-android-build-logs-${{ matrix.abi }}
+          path: |
+            android/cross/*.cross
+            android/.build/${{ matrix.abi }}/**/*.log
+            android/.build/${{ matrix.abi }}/**/meson-logs/**
+            android/.build/${{ matrix.abi }}/**/CMakeFiles/CMake*.yaml
+            android/.build/${{ matrix.abi }}/**/CMakeFiles/CMake*.log
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Sanity-check artifact contents
         env:

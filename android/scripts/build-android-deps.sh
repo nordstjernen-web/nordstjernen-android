@@ -42,6 +42,7 @@ is_valid_abi "${CURRENT_ABI}" || die "invalid ABI: ${CURRENT_ABI}"
 # Environment
 # ---------------------------------------------------------------------------
 require_ndk
+log_tool_versions
 set_abi_env "${CURRENT_ABI}"
 load_manifest
 
@@ -230,6 +231,7 @@ log "==> Building Android dependency sysroot for ${CURRENT_ABI}"
 log "    NDK:     ${ANDROID_NDK_HOME}"
 log "    Prefix:  ${PREFIX}"
 log "    Deps:    ${#DEP_ORDER[@]} pinned in manifest"
+log "    Verbose: ${NORDSTJERNEN_ANDROID_VERBOSE:-0}"
 
 for step in "${BUILD_PLAN[@]}"; do
   # The --only filter matches manifest names; map the two freetype stages.

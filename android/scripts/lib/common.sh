@@ -13,6 +13,10 @@
 
 set -euo pipefail
 
+if [ "${NORDSTJERNEN_ANDROID_VERBOSE:-0}" != "0" ]; then
+  set -x
+fi
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -46,6 +50,7 @@ detect_host_tag() {
   case "$(uname -s)" in
     Linux)  echo "linux-x86_64" ;;
     Darwin) echo "darwin-x86_64" ;;
+    MINGW*|MSYS*|CYGWIN*) echo "windows-x86_64" ;;
     *) die "unsupported build host: $(uname -s)" ;;
   esac
 }
@@ -71,6 +76,23 @@ require_ndk() {
       warn "NDK ${v} != pinned ${NDK_VERSION_EXPECTED}; continuing anyway"
   fi
   log "Using NDK ${ANDROID_NDK_HOME} (host ${HOST_TAG}, API ${ANDROID_API})"
+}
+
+log_tool_versions() {
+  local tool
+  log "Build host: $(uname -a)"
+  for tool in bash meson ninja cmake pkg-config python3 autoconf automake libtool gperf make curl tar sha256sum; do
+    if command -v "${tool}" >/dev/null 2>&1; then
+      log "tool ${tool}: $(command -v "${tool}")"
+      case "${tool}" in
+        meson|ninja|cmake|pkg-config|python3|autoconf|automake|gperf|make|curl|tar)
+          "${tool}" --version 2>&1 | head -3 | sed 's/^/[deps]   /' >&2 || true
+          ;;
+      esac
+    else
+      warn "tool ${tool}: missing"
+    fi
+  done
 }
 
 # ---------------------------------------------------------------------------
@@ -210,6 +232,7 @@ build_cmake() {  # build_cmake <srcdir> [extra -D args...]
   local src="$1"; shift
   local b="${src}/_build"
   rm -rf "${b}"
+  log "cmake source=${src} build=${b} prefix=${PREFIX}"
   local launcher=()
   [ -n "${CC_LAUNCHER}" ] && launcher=(-DCMAKE_C_COMPILER_LAUNCHER="${CC_LAUNCHER}" -DCMAKE_CXX_COMPILER_LAUNCHER="${CC_LAUNCHER}")
   cmake -G Ninja -S "${src}" -B "${b}" \
@@ -236,6 +259,7 @@ build_meson() {  # build_meson <srcdir> [extra -D args...]
   local src="$1"; shift
   local b="${src}/_build"
   rm -rf "${b}"
+  log "meson source=${src} build=${b} prefix=${PREFIX}"
   meson setup "${b}" "${src}" \
     --cross-file "${CROSS_DIR}/${CURRENT_ABI}.cross" \
     --prefix "${PREFIX}" \
@@ -251,6 +275,7 @@ build_meson() {  # build_meson <srcdir> [extra -D args...]
 
 build_autotools() {  # build_autotools <srcdir> [extra ./configure args...]
   local src="$1"; shift
+  log "autotools source=${src} prefix=${PREFIX}"
   ( cd "${src}"
     CC="${CC_LAUNCHER:+${CC_LAUNCHER} }${CC}" \
     CXX="${CC_LAUNCHER:+${CC_LAUNCHER} }${CXX}" \
