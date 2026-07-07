@@ -151,10 +151,16 @@ dep_pixman() {
 
 dep_fontconfig() {
   local s; s="$(fetch_source fontconfig)"
-  # fontconfig's fcint.h uses locale_t and the LC_*_MASK constants but only
-  # includes <xlocale.h> when its own HAVE_XLOCALE_H probe succeeds, which it
-  # does not under the iOS cross-configure. <xlocale.h> is force-included for
-  # every C compile via the meson cross-file (see gen-cross-files.sh).
+  # fcint.h uses locale_t and the LC_*_MASK constants but only includes
+  # <xlocale.h> when its own HAVE_XLOCALE_H probe succeeds, which it does not
+  # under the iOS cross-configure. Add the include in-source, right before the
+  # first use. This mirrors the native-macOS build (where HAVE_XLOCALE_H is set)
+  # and, unlike a compiler-level -include, does not get injected into
+  # fontconfig's gperf codegen preprocess (which would corrupt fcobjshash).
+  perl -0777 -pi -e 's/\ntypedef locale_t FcLocale;/\n#include <xlocale.h>\ntypedef locale_t FcLocale;/' \
+    "${s}/src/fcint.h"
+  grep -B1 'typedef locale_t FcLocale;' "${s}/src/fcint.h" | grep -q '#include <xlocale.h>' \
+    || die "fontconfig: fcint.h xlocale patch did not apply"
   build_meson "${s}" \
     -Ddoc=disabled -Dtests=disabled -Dtools=disabled -Dcache-build=disabled
 }
