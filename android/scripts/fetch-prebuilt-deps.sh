@@ -18,7 +18,7 @@
 #     --sysroot DIR     destination base (default: $NORDSTJERNEN_ANDROID_SYSROOT
 #                       or android/sysroot)
 #     --abi ABI         download only one ABI (default: all four)
-#     --repo OWNER/REPO GitHub repo (default: nordstjernen-web/nordstjernen-android)
+#     --repo OWNER/REPO GitHub repo (default: nordstjernen-web/nordstjernen-dependencies-build)
 #     --tag TAG         release tag to download (default: sysroot-latest)
 
 set -euo pipefail
@@ -26,7 +26,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/common.sh
 source "${SCRIPT_DIR}/lib/common.sh"
 
-REPO="nordstjernen-web/nordstjernen-android"
+REPO="nordstjernen-web/nordstjernen-dependencies-build"
 TAG="sysroot-latest"
 SYSROOT_BASE="${NORDSTJERNEN_ANDROID_SYSROOT:-${ANDROID_DIR}/sysroot}"
 ABIS=("${ALL_ABIS[@]}")

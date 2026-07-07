@@ -1,4 +1,4 @@
-# nordstjernen-android
+# nordstjernen-dependencies-build
 
 Mobile build support for the [Nordstjernen](https://github.com/nordstjernen-web/nordstjernen)
 web browser engine.
@@ -75,7 +75,7 @@ Then point the engine's build at `$NORDSTJERNEN_ANDROID_SYSROOT` and run
 - **Targets:** NDK `27.3.13750724` (r27); ABIs `arm64-v8a`, `x86_64`;
   minSdk 35; 16 KB page size; shared libraries.
 - **CI:** [`.github/workflows/build-deps.yml`](.github/workflows/build-deps.yml)
-  publishes [`sysroot-latest`](https://github.com/nordstjernen-web/nordstjernen-android/releases/tag/sysroot-latest)
+  publishes [`sysroot-latest`](https://github.com/nordstjernen-web/nordstjernen-dependencies-build/releases/tag/sysroot-latest)
   on every successful build of `main`.
 
 ### iOS

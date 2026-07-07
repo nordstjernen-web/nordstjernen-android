@@ -135,13 +135,16 @@ jobs:
           done
           [ "${fail}" -eq 0 ] || { echo "::error::one or more archives are not arm64"; exit 1; }
           echo "ok   all $(ls -1 "${PREFIX}/lib/"*.a | wc -l | tr -d ' ') archives are arm64"
-          # Confirm libcurl was actually built against brotli (decodes
-          # `Content-Encoding: br`): a brotli-enabled static libcurl carries
-          # undefined BrotliDecoder* references.
-          if nm "${PREFIX}/lib/libcurl.a" 2>/dev/null | grep -q 'BrotliDecoder'; then
-            echo "ok   libcurl.a references brotli (Content-Encoding: br enabled)"
+          # Confirm libcurl was built against brotli (decodes `Content-Encoding:
+          # br`). curl's own libcurl.pc declares the brotli modules in its
+          # private requires when enabled — that is the authoritative signal;
+          # also accept the object reference via the Xcode nm (the plain nm on
+          # PATH can misread an arm64 Mach-O archive and yield a false negative).
+          if grep -qi 'brotli' "${PREFIX}/lib/pkgconfig/libcurl.pc" 2>/dev/null \
+             || xcrun nm "${PREFIX}/lib/libcurl.a" 2>/dev/null | grep -q 'BrotliDecoder'; then
+            echo "ok   libcurl built with brotli (Content-Encoding: br enabled)"
           else
-            echo "::error::libcurl.a does not reference brotli"; exit 1
+            echo "::error::libcurl was not built with brotli"; exit 1
           fi
 
       - name: Stage artifact tree
