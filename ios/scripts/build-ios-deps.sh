@@ -218,7 +218,30 @@ dep_brotli() {
 
 dep_sqlite3() {
   local s; s="$(fetch_source sqlite3)"
-  build_autotools "${s}" --disable-static-shell --disable-editline --disable-readline
+  # The autoconf build also compiles the sqlite3 shell (shell.c), which calls
+  # system() — unavailable on iOS. Only the library is needed, so compile the
+  # single-file amalgamation straight into a static lib and install the headers
+  # and a pkg-config file. Flags match sqlite-autoconf's library defaults.
+  ( cd "${s}"
+    ${CC_LAUNCHER:+${CC_LAUNCHER} }"${CC}" ${PLATFORM_ARCH_FLAGS} -fPIC -O2 -I. \
+      -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_MATH_FUNCTIONS \
+      -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_RTREE \
+      -c sqlite3.c -o sqlite3.o
+    "${AR}" crs "${PREFIX}/lib/libsqlite3.a" sqlite3.o
+    cp -f sqlite3.h sqlite3ext.h "${PREFIX}/include/"
+    cat > "${PREFIX}/lib/pkgconfig/sqlite3.pc" <<EOF
+prefix=${PREFIX}
+exec_prefix=\${prefix}
+libdir=\${prefix}/lib
+includedir=\${prefix}/include
+
+Name: SQLite
+Description: SQL database engine
+Version: ${DEP_VERSION[sqlite3]}
+Libs: -L\${libdir} -lsqlite3
+Cflags: -I\${includedir}
+EOF
+  )
 }
 
 dep_uchardet() {
