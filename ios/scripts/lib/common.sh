@@ -15,6 +15,15 @@
 
 set -euo pipefail
 
+# The manifest uses associative arrays (declare -A), a Bash 4+ feature. macOS
+# ships Bash 3.2, so fail fast with a clear message instead of a cryptic
+# `declare: -A: invalid option` further down.
+if [ "${BASH_VERSINFO:-0}" -lt 4 ]; then
+  echo "error: this script needs Bash 4+ (found ${BASH_VERSION:-unknown})." >&2
+  echo "       On macOS: 'brew install bash' and run under it (put its bin on PATH)." >&2
+  exit 1
+fi
+
 if [ "${NORDSTJERNEN_IOS_VERBOSE:-0}" != "0" ]; then
   set -x
 fi
