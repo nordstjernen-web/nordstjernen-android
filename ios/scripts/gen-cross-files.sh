@@ -44,9 +44,12 @@ nm         = '${NM}'
 pkg-config = 'pkg-config'
 
 [built-in options]
-c_args          = common_args + ['-fPIC', '-O2']
-cpp_args        = common_args + ['-fPIC', '-O2']
-objc_args       = common_args + ['-fPIC', '-O2']
+# _DARWIN_C_SOURCE exposes Darwin's non-POSIX extensions (locale_t and the
+# LC_*_MASK constants, etc.) that some deps use unconditionally but that a
+# strict -std=c11 hides on Apple platforms (e.g. fontconfig's fcint.h).
+c_args          = common_args + ['-fPIC', '-O2', '-D_DARWIN_C_SOURCE']
+cpp_args        = common_args + ['-fPIC', '-O2', '-D_DARWIN_C_SOURCE']
+objc_args       = common_args + ['-fPIC', '-O2', '-D_DARWIN_C_SOURCE']
 c_link_args     = common_args
 cpp_link_args   = common_args
 objc_link_args  = common_args
