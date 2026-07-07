@@ -196,7 +196,7 @@ download_verify() {
     # curl's plain --retry would otherwise not retry. Fail loudly here so a
     # download error is not later misreported as a checksum mismatch.
     if ! curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors \
-              -A "nordstjernen-ios-deps/1.0 (+https://github.com/nordstjernen-web/nordstjernen-android)" \
+              -A "nordstjernen-ios-deps/1.0 (+https://github.com/nordstjernen-web/nordstjernen-dependencies-build)" \
               -o "${file}.tmp" "${url}"; then
       rm -f "${file}.tmp"
       die "download failed for ${name} from ${url}"

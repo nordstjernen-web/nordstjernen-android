@@ -78,7 +78,7 @@ downloaded from wrapdb. Its version and sha256 are pinned in
 
 Successful builds on `main` publish the sysroots as assets on a **public GitHub
 Release** under the rolling tag
-[`ios-sysroot-latest`](https://github.com/nordstjernen-web/nordstjernen-android/releases/tag/ios-sysroot-latest):
+[`ios-sysroot-latest`](https://github.com/nordstjernen-web/nordstjernen-dependencies-build/releases/tag/ios-sysroot-latest):
 
 ```
 nordstjernen-ios-sysroot-device.tar.gz

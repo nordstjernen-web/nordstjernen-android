@@ -18,7 +18,7 @@
 #     --sysroot DIR        destination base (default: $NORDSTJERNEN_IOS_SYSROOT
 #                          or ios/sysroot)
 #     --platform PLATFORM  download only one platform (default: both)
-#     --repo OWNER/REPO    GitHub repo (default: nordstjernen-web/nordstjernen-android)
+#     --repo OWNER/REPO    GitHub repo (default: nordstjernen-web/nordstjernen-dependencies-build)
 #     --tag TAG            release tag to download (default: ios-sysroot-latest)
 
 set -euo pipefail
@@ -26,7 +26,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/common.sh
 source "${SCRIPT_DIR}/lib/common.sh"
 
-REPO="nordstjernen-web/nordstjernen-android"
+REPO="nordstjernen-web/nordstjernen-dependencies-build"
 TAG="ios-sysroot-latest"
 SYSROOT_BASE="${NORDSTJERNEN_IOS_SYSROOT:-${IOS_DIR}/sysroot}"
 PLATFORMS=("${ALL_PLATFORMS[@]}")

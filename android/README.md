@@ -69,7 +69,7 @@ features that Android's bionic only provides on newer API levels:
 
 Successful builds on `main` publish the sysroots as assets on a **public GitHub
 Release** under the rolling tag
-[`sysroot-latest`](https://github.com/nordstjernen-web/nordstjernen-android/releases/tag/sysroot-latest):
+[`sysroot-latest`](https://github.com/nordstjernen-web/nordstjernen-dependencies-build/releases/tag/sysroot-latest):
 
 ```
 nordstjernen-android-sysroot-arm64-v8a.tar.gz
