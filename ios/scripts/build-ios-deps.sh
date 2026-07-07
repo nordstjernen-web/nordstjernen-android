@@ -200,8 +200,12 @@ dep_openssl() {
 
 dep_nghttp2() {
   local s; s="$(fetch_source nghttp2)"
+  # nghttp2 1.69 selects the library target from the standard CMake
+  # BUILD_STATIC_LIBS / BUILD_SHARED_LIBS (not the older ENABLE_*_LIB). With
+  # BUILD_SHARED_LIBS=OFF (from build_cmake) the alias picks nghttp2_static, so
+  # that target must actually be built — hence BUILD_STATIC_LIBS=ON.
   build_cmake "${s}" \
-    -DENABLE_LIB_ONLY=ON -DENABLE_SHARED_LIB=OFF -DENABLE_STATIC_LIB=ON \
+    -DENABLE_LIB_ONLY=ON -DBUILD_STATIC_LIBS=ON \
     -DENABLE_DOC=OFF -DBUILD_TESTING=OFF
 }
 
