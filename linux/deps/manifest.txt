@@ -1,0 +1,42 @@
+# Nordstjernen Linux prebuilt-dependency manifest
+#
+# Pinned third-party native dependencies that are compiled on Ubuntu into the
+# Linux "GTK overlay" consumed when testing the desktop Nordstjernen engine.
+#
+# One record per line, whitespace separated:
+#
+#   <name>  <version>  <sha256>  <url>
+#
+# - <name>    must match the build function name in build-linux-deps.sh
+# - <sha256>  is verified against the downloaded tarball before extraction.
+#             The literal value AUTO means "not yet pinned": CI downloads the
+#             tarball, prints its real sha256 (a `PINME <name> <sha>` line) and
+#             proceeds WITHOUT verifying. AUTO must never reach main -- the
+#             build-linux-deps workflow fails the build on main if any entry is
+#             still AUTO. Replace AUTO with the printed checksum to pin it.
+# - lines beginning with '#' and blank lines are ignored
+#
+# Unlike the android/ and ios/ sysroots (which cross-compile the whole
+# GLib/cairo/pango stack because mobile drops system libraries), the desktop
+# Linux port builds *against* Ubuntu's system graphics stack. The engine only
+# needs one piece that Ubuntu does not package: a bleeding-edge development
+# release of GTK 4. So this manifest pins GTK itself and nothing else; every
+# other GTK dependency (glib, cairo, pango, gdk-pixbuf, graphene, libepoxy,
+# harfbuzz, wayland, ...) is provided by the distro via `apt build-dep gtk4`.
+#
+# Versions below were pinned against upstream release tarballs and their
+# checksums verified at pin time. Bump deliberately and re-verify the sha256.
+
+# --- GTK build deps too new for the distro ----------------------------------
+# GTK 4.23.2 requires wayland-protocols >= 1.48, but even ubuntu-26.04 only
+# ships 1.47. wayland-protocols is a tiny, XML-only meson package (no compiled
+# code), so we build a new-enough release into our prefix; it installs
+# wayland-protocols.pc into share/pkgconfig, which our prefix puts ahead of the
+# system copy so GTK picks it up.
+wayland-protocols 1.48 c563af8e2e784f9599fe23819a3fc5e7d946e76db9f90a2e3ba6c9a869a52911  https://gitlab.freedesktop.org/wayland/wayland-protocols/-/archive/1.48/wayland-protocols-1.48.tar.gz
+
+# --- GTK (development release, not packaged by Ubuntu) ----------------------
+# 4.23.x is the unstable development series leading to GTK 4.24. Ubuntu ships
+# only stable GTK, so we build this dev release from the GNOME source tarball
+# to test the latest Nordstjernen against it.
+gtk         4.23.2    36de8f85b30a9967cf9555a0717ed65046a196b9b3cda02dcf84c116a01ee602  https://download.gnome.org/sources/gtk/4.23/gtk-4.23.2.tar.xz
