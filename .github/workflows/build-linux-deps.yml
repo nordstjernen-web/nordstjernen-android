@@ -206,22 +206,17 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist stage
+          echo "== downloaded artifact tree =="; find artifacts -maxdepth 3 | sed 's/^/  /'
           for arch in x86_64; do
-            a="artifacts/nordstjernen-linux-gtk-${arch}"
-            # upload-artifact roots the archive at the common ancestor of its
-            # files, so the top-level <arch>/ dir may or may not survive the
-            # round-trip (a single-subdir upload gets the prefix stripped).
-            # Accept both layouts, then restage under a clean <arch>/ so the
-            # tarball always extracts straight into $NORDSTJERNEN_LINUX_SYSROOT.
-            if [ -d "${a}/${arch}" ]; then
-              src="${a}/${arch}"
-            elif [ -d "${a}/lib" ]; then
-              src="${a}"
-            else
-              echo "::error::cannot locate GTK overlay for ${arch} under ${a}"
-              find "${a}" -maxdepth 2 | sed 's/^/  /'
-              exit 1
-            fi
+            # Locate the overlay by CONTENT rather than by guessing how
+            # download-artifact nested it: the built gtk4.pc is always at
+            # <overlay>/lib/pkgconfig/gtk4.pc, so its grandparent's parent is
+            # the overlay root regardless of any wrapping directories.
+            pc="$(find artifacts -type f -path '*/lib/pkgconfig/gtk4.pc' | head -1)"
+            [ -n "${pc}" ] || { echo "::error::could not find gtk4.pc under artifacts/ for ${arch}"; exit 1; }
+            src="$(cd "$(dirname "${pc}")/../.." && pwd)"
+            # Restage under a clean <arch>/ so the tarball always extracts
+            # straight into $NORDSTJERNEN_LINUX_SYSROOT/<arch>.
             rm -rf "stage/${arch}"; mkdir -p "stage/${arch}"
             cp -a "${src}/." "stage/${arch}/"
             tar -C stage -czf "dist/nordstjernen-linux-gtk-${arch}.tar.gz" "${arch}"
