@@ -205,13 +205,26 @@ jobs:
       - name: Package per-arch tarballs and checksums
         run: |
           set -euo pipefail
-          mkdir -p dist
+          mkdir -p dist stage
           for arch in x86_64; do
-            d="artifacts/nordstjernen-linux-gtk-${arch}"
-            test -d "${d}/${arch}" || { echo "::error::missing overlay for ${arch}"; exit 1; }
-            # Tarball keeps a top-level <arch>/ dir so it extracts directly into
-            # $NORDSTJERNEN_LINUX_SYSROOT.
-            tar -C "${d}" -czf "dist/nordstjernen-linux-gtk-${arch}.tar.gz" "${arch}"
+            a="artifacts/nordstjernen-linux-gtk-${arch}"
+            # upload-artifact roots the archive at the common ancestor of its
+            # files, so the top-level <arch>/ dir may or may not survive the
+            # round-trip (a single-subdir upload gets the prefix stripped).
+            # Accept both layouts, then restage under a clean <arch>/ so the
+            # tarball always extracts straight into $NORDSTJERNEN_LINUX_SYSROOT.
+            if [ -d "${a}/${arch}" ]; then
+              src="${a}/${arch}"
+            elif [ -d "${a}/lib" ]; then
+              src="${a}"
+            else
+              echo "::error::cannot locate GTK overlay for ${arch} under ${a}"
+              find "${a}" -maxdepth 2 | sed 's/^/  /'
+              exit 1
+            fi
+            rm -rf "stage/${arch}"; mkdir -p "stage/${arch}"
+            cp -a "${src}/." "stage/${arch}/"
+            tar -C stage -czf "dist/nordstjernen-linux-gtk-${arch}.tar.gz" "${arch}"
           done
           cp linux/deps/manifest.txt dist/manifest.txt
           ( cd dist && sha256sum ./*.tar.gz manifest.txt > SHA256SUMS )
