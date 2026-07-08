@@ -68,6 +68,14 @@ want() {  # honor --only filter
 # Per-dependency builds
 # ===========================================================================
 
+dep_wayland_protocols() {
+  local s; s="$(fetch_source wayland-protocols)"
+  # Pure XML/data package: no compiled code. Skip the test suite (it would pull
+  # wayland-scanner) and just install the protocol definitions + the
+  # wayland-protocols.pc that GTK's wayland backend needs.
+  build_meson "${s}" -Dtests=false
+}
+
 dep_gtk() {
   local s; s="$(fetch_source gtk)"
   # Build the shared library only; skip everything that pulls extra tooling or
@@ -88,8 +96,9 @@ dep_gtk() {
     -Dmedia-gstreamer=disabled
 }
 
-# Ordered build plan.
-BUILD_PLAN=(gtk)
+# Ordered build plan (manifest names; wayland-protocols must precede gtk so the
+# newer .pc is in our prefix before GTK's dependency check runs).
+BUILD_PLAN=(wayland-protocols gtk)
 
 log "==> Building Nordstjernen Linux GTK overlay for ${CURRENT_ARCH}"
 log "    Prefix:  ${PREFIX}"
@@ -111,7 +120,8 @@ fi
 for step in "${BUILD_PLAN[@]}"; do
   want "${step}" || { log "skip ${step} (filtered)"; continue; }
   log "--- ${step} ---"
-  "dep_${step}"
+  # Function names use underscores; manifest/plan names use hyphens.
+  "dep_${step//-/_}"
 done
 
 strip_install

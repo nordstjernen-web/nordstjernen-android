@@ -197,8 +197,10 @@ setup_build_env() {
   # Prepend our prefix so a freshly built library shadows any system copy of the
   # same name. PKG_CONFIG_PATH is *additive* to pkg-config's built-in search
   # path, so the system libraries GTK builds against (glib, cairo, pango,
-  # gdk-pixbuf, graphene, libepoxy, ...) stay discoverable.
-  export PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+  # gdk-pixbuf, graphene, libepoxy, ...) stay discoverable. share/pkgconfig is
+  # included because arch-independent modules (e.g. wayland-protocols) install
+  # their .pc there rather than under lib/.
+  export PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig:${PREFIX}/share/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
   export PKG_CONFIG="${PKG_CONFIG:-pkg-config}"
   export LD_LIBRARY_PATH="${PREFIX}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
