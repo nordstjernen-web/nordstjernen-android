@@ -42,11 +42,13 @@ order:
 - **Network:** OpenSSL (libcrypto + libssl), nghttp2, brotli (libcurl decodes
   `Content-Encoding: br`), libcurl (HTTP/2 + brotli)
 - **Misc:** sqlite3, uchardet, libpsl, libwebp
-- **Media (`<video>`/`<audio>`):** libogg, libvorbis, opus, dav1d — the open-web
-  decode stack Firefox vendors (AV1 via dav1d; Opus and Vorbis audio; Ogg
-  framing). dav1d's x86_64 asm needs `nasm` (installed in CI); arm64 asm is
-  assembled by clang. libvpx (VP8/VP9) is a documented follow-up. H.264/HEVC/AAC
-  come from Android `MediaCodec`, not from here.
+- **Media (`<video>`/`<audio>`):** libogg, libvorbis, opus, dav1d, libvpx — the
+  open-web decode stack Firefox vendors (AV1 via dav1d; VP8/VP9 via libvpx; Opus
+  and Vorbis audio; Ogg framing). dav1d's x86_64 asm needs `nasm` and libvpx's
+  needs `yasm` (both installed in CI); arm64 uses compiler intrinsics/clang.
+  libvpx is built decode-only as a **static** `libvpx.a` (its ffmpeg-style
+  `configure` is static-oriented on Android); the engine links it into its own
+  shared objects. H.264/HEVC/AAC come from Android `MediaCodec`, not from here.
 - **On-device inference:** llama.cpp (libllama + ggml), built with
   `GGML_NATIVE=OFF`/`GGML_OPENMP=OFF` for a clean NDK cross-compile
 

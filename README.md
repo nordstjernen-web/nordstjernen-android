@@ -61,6 +61,7 @@ platform's manifest
 | Media | libvorbis | 1.3.7 | Vorbis audio decode |
 | Media | opus | 1.6.1 | Opus audio decode |
 | Media | dav1d | 1.5.3 | AV1 video decode (Firefox's decoder) |
+| Media | libvpx | 1.16.0 | VP8/VP9 video decode (Android only for now; static) |
 | Android only | llama | b9632 | on-device LLM (libllama + ggml) |
 
 `llama.cpp` is built for **Android only** — mobile iOS does not ship the
@@ -72,14 +73,24 @@ as sysroot libraries.
 
 The **Media** group is the open-web decode stack the engine needs to play
 `<video>` and `<audio>`. It mirrors the royalty-free codecs Firefox vendors in
-mozilla-central (`media/libdav1d`, `media/libopus`, `media/libvorbis`,
-`media/libogg`): **dav1d** decodes AV1, **opus** and **libvorbis** decode the
-two open web audio codecs, and **libogg** provides Ogg container framing. Firefox
-pins these to specific upstream revisions; we pin the latest upstream *stable
-release* (≥ Firefox's revision in each case, so its security fixes are carried).
-Because codecs are the browser's most hostile-input-exposed surface, each is —
-like every other dependency — pinned by exact version and verified `sha256`, and
-built decode-oriented (CLI tools, tests and examples dropped).
+mozilla-central (`media/libdav1d`, `media/libvpx`, `media/libopus`,
+`media/libvorbis`, `media/libogg`): **dav1d** decodes AV1, **libvpx** decodes
+VP8/VP9, **opus** and **libvorbis** decode the two open web audio codecs, and
+**libogg** provides Ogg container framing. Firefox pins these to specific
+upstream revisions; we pin the latest upstream *stable release* (≥ Firefox's
+revision in each case, so its security fixes are carried). Because codecs are the
+browser's most hostile-input-exposed surface, each is — like every other
+dependency — pinned by exact version and verified `sha256`, and built
+decode-oriented (encoders, CLI tools, tests and examples dropped).
+
+`libvpx` is currently built for **Android only** and as a **static** `libvpx.a`
+(the one static library in the otherwise-shared Android sysroot): it ships its
+own ffmpeg-style `configure` whose Android path is static-oriented, and a static
+archive — linked into the engine's own shared objects — sidesteps the shared-lib
+`-static`/`-shared` conflict and the 16 KB page-size link flag. iOS `libvpx` is
+a tracked follow-up (its `configure` hardcodes the iphoneos SDK and needs
+`external_build` + separate simulator handling); on iOS, VP8/VP9 content is far
+rarer than the platform's H.264/HLS, so it is lower priority.
 
 #### How the rest of the media surface is covered
 
@@ -88,7 +99,7 @@ surface is split across three places, and only the gap belongs here:
 
 | Format(s) | Handled by | Where |
 |-----------|-----------|-------|
-| AV1 video · Opus/Vorbis audio · Ogg | **this repo** (dav1d, opus, libvorbis, libogg) | sysroot |
+| AV1 · VP8/VP9 video · Opus/Vorbis audio · Ogg | **this repo** (dav1d, libvpx, opus, libvorbis, libogg) | sysroot |
 | H.264, HEVC, AAC (patent-encumbered) | the **OS** decoders | Android `MediaCodec`, iOS VideoToolbox/AudioToolbox |
 | GIF, PNG, JPEG, BMP images | **Wuffs** (memory-safe) | vendored in the engine tree |
 | WebP images | **libwebp** | sysroot (already built) |
@@ -101,15 +112,14 @@ is just the open codecs the OS and Wuffs do not provide.
 #### Candidate follow-up libraries (also vendored by Firefox)
 
 Firefox's `media/` tree carries a few more third-party libraries. They are *not*
-in this change, with reasons — this is the shortlist if the engine's media
+built here yet, with reasons — this is the shortlist if the engine's media
 pipeline grows:
 
-- **libvpx** (VP8/VP9 decode) — the clear #1 gap: VP9 is widely deployed
-  (e.g. YouTube WebM) and neither dav1d (AV1-only) nor the OS reliably covers it.
-  Deferred only because its bespoke, ffmpeg-style `configure` (not
-  CMake/Meson/Autotools) needs a custom cross wrapper with explicit 16 KB
-  page-size link plumbing and `yasm`/`nasm` — it warrants its own CI-verified
-  change, not a rider on this one.
+- **libvpx on iOS** (VP8/VP9 decode) — built for Android (above); iOS is the
+  remaining half. Its `configure` hardcodes the iphoneos SDK, so a static iOS
+  slice needs `external_build` plus separate device/simulator handling — its own
+  CI-verified change. Lower priority because iOS video is overwhelmingly
+  H.264/HLS via the platform.
 - **libnestegg** (WebM demuxer) — small C library that frames VP9/AV1/Opus/Vorbis
   out of `.webm`. Like lexbor/QuickJS/Wuffs it is a candidate for *engine-tree*
   vendoring rather than a sysroot library; where it lands depends on how the

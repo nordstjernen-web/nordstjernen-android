@@ -257,6 +257,45 @@ dep_dav1d() {
     -Denable_tools=false -Denable_tests=false -Denable_examples=false
 }
 
+dep_libvpx() {
+  local s; s="$(fetch_source libvpx)"
+  # libvpx ships its own ffmpeg-style configure (not CMake/Meson/Autotools), so
+  # it gets a bespoke recipe rather than a build_* wrapper. Build a STATIC,
+  # decode-only, PIC libvpx.a that the engine links into its own shared objects:
+  #  - libvpx's Android path is static-oriented (it forces -static into LDFLAGS),
+  #    and a static archive sidesteps the 16 KB page-size link flag entirely
+  #    (there is no shared-object link step to align).
+  #  - arm64 NEON is compiler intrinsics, so no external assembler is invoked;
+  #    x86_64 SIMD needs an assembler -- select yasm (installed in CI).
+  #  - decode-only (encoders + webm-io/libyuv off) keeps the hostile-input
+  #    surface and size down; the engine demuxes WebM itself.
+  local target extra=()
+  case "${CURRENT_ABI}" in
+    arm64-v8a) target="arm64-android-gcc" ;;
+    x86_64)    target="x86_64-android-gcc"; extra=(--as=yasm) ;;
+    *) die "libvpx: unsupported ABI ${CURRENT_ABI}" ;;
+  esac
+  local b="${s}/_build"; rm -rf "${b}"; mkdir -p "${b}"
+  log "libvpx configure target=${target} prefix=${PREFIX}"
+  ( cd "${b}"
+    # NDK clang toolchain via env. LD/AS point at clang; for arm64 AS is only a
+    # formality (intrinsics), for x86_64 --as=yasm wins. No CROSS prefix: CC is
+    # the self-contained NDK clang driver that already knows the sysroot.
+    export LD="${CC}" AS="${CC}"
+    "${s}/configure" \
+      --target="${target}" \
+      --prefix="${PREFIX}" --libdir="${PREFIX}/lib" \
+      --enable-static --disable-shared --enable-pic \
+      --disable-vp8-encoder --disable-vp9-encoder \
+      --disable-examples --disable-tools --disable-docs --disable-unit-tests \
+      --disable-install-bins --disable-install-srcs \
+      --disable-webm-io --disable-libyuv \
+      "${extra[@]}"
+    make -j"${NPROC}"
+    make install
+  )
+}
+
 dep_curl() {
   local s; s="$(fetch_source curl)"
   build_cmake "${s}" \
@@ -292,7 +331,7 @@ BUILD_PLAN=(
   cairo pango
   openssl nghttp2 brotli
   sqlite3 uchardet libpsl libwebp
-  libogg libvorbis opus dav1d
+  libogg libvorbis opus dav1d libvpx
   curl
   llama
 )
