@@ -77,15 +77,55 @@ mozilla-central (`media/libdav1d`, `media/libopus`, `media/libvorbis`,
 two open web audio codecs, and **libogg** provides Ogg container framing. Firefox
 pins these to specific upstream revisions; we pin the latest upstream *stable
 release* (≥ Firefox's revision in each case, so its security fixes are carried).
-`libvpx` (VP8/VP9) is a deliberate follow-up — its bespoke, ffmpeg-style
-`configure` needs a custom cross wrapper (with explicit 16 KB page-size link
-plumbing and `yasm`/`nasm`) and its own CI-verified change. On mobile the
-platform still supplies H.264/HEVC/AAC (Android `MediaCodec`, iOS
-VideoToolbox/AudioToolbox); only the codecs the OS does *not* reliably provide
-are built here. These codecs are the browser's most exposed hostile-input
-surface, so — like every other dependency — each is pinned by exact version and
-verified `sha256`. On **desktop Linux** the engine links the distro's media
-libraries, so the GTK overlay does not build them.
+Because codecs are the browser's most hostile-input-exposed surface, each is —
+like every other dependency — pinned by exact version and verified `sha256`, and
+built decode-oriented (CLI tools, tests and examples dropped).
+
+#### How the rest of the media surface is covered
+
+Not every format needs a new sysroot library; the full `<video>`/`<audio>`/image
+surface is split across three places, and only the gap belongs here:
+
+| Format(s) | Handled by | Where |
+|-----------|-----------|-------|
+| AV1 video · Opus/Vorbis audio · Ogg | **this repo** (dav1d, opus, libvorbis, libogg) | sysroot |
+| H.264, HEVC, AAC (patent-encumbered) | the **OS** decoders | Android `MediaCodec`, iOS VideoToolbox/AudioToolbox |
+| GIF, PNG, JPEG, BMP images | **Wuffs** (memory-safe) | vendored in the engine tree |
+| WebP images | **libwebp** | sysroot (already built) |
+| HTML/CSS/JS, MP4/WebM demux glue | **lexbor / QuickJS / engine** | engine tree |
+
+So JPEG/GIF/PNG are deliberately *not* sysroot libraries (Wuffs decodes them in
+the engine), and H.264/AAC/HEVC come from the platform — which is why this group
+is just the open codecs the OS and Wuffs do not provide.
+
+#### Candidate follow-up libraries (also vendored by Firefox)
+
+Firefox's `media/` tree carries a few more third-party libraries. They are *not*
+in this change, with reasons — this is the shortlist if the engine's media
+pipeline grows:
+
+- **libvpx** (VP8/VP9 decode) — the clear #1 gap: VP9 is widely deployed
+  (e.g. YouTube WebM) and neither dav1d (AV1-only) nor the OS reliably covers it.
+  Deferred only because its bespoke, ffmpeg-style `configure` (not
+  CMake/Meson/Autotools) needs a custom cross wrapper with explicit 16 KB
+  page-size link plumbing and `yasm`/`nasm` — it warrants its own CI-verified
+  change, not a rider on this one.
+- **libnestegg** (WebM demuxer) — small C library that frames VP9/AV1/Opus/Vorbis
+  out of `.webm`. Like lexbor/QuickJS/Wuffs it is a candidate for *engine-tree*
+  vendoring rather than a sysroot library; where it lands depends on how the
+  engine's demux layer is organised.
+- **libspeex_resampler · libsoundtouch · kiss_fft** — Web Audio DSP helpers
+  (sample-rate conversion, `playbackRate` time-stretch, `AnalyserNode` FFT).
+  Small and header-light; typically engine-vendored.
+- **libcubeb** — the audio *output* backend. It is platform glue over
+  AAudio/AudioUnit, not a decode library, so it belongs to the engine, not here.
+- **libaom** (AV1 *encode*) — only needed for sending AV1 over WebRTC; large.
+  Playback (decode) is already covered by dav1d.
+- **mp4parse** (Rust) — MP4 / fragmented-MP4 demux. Excluded from the mobile
+  sysroot by the repo's no-Rust-toolchain-on-mobile policy.
+
+On **desktop Linux** the engine links the distro's media libraries, so the GTK
+overlay builds none of the above.
 
 ## Quick start
 
