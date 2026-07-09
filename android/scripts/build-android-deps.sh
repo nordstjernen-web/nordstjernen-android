@@ -275,14 +275,17 @@ dep_libvpx() {
     x86_64)    target="x86_64-android-gcc"; extra=(--as=yasm) ;;
     *) die "libvpx: unsupported ABI ${CURRENT_ABI}" ;;
   esac
-  local b="${s}/_build"; rm -rf "${b}"; mkdir -p "${b}"
   log "libvpx configure target=${target} prefix=${PREFIX}"
-  ( cd "${b}"
+  # Build in-tree (configure from the source root): libvpx's out-of-tree build
+  # breaks the generated headers' relative includes (vp9_decoder.c does
+  # #include "./vpx_config.h" / "./vp9_rtcd.h", which resolve only when make
+  # runs from the source root). fetch_source re-extracts a clean tree each run.
+  ( cd "${s}"
     # NDK clang toolchain via env. LD/AS point at clang; for arm64 AS is only a
     # formality (intrinsics), for x86_64 --as=yasm wins. No CROSS prefix: CC is
     # the self-contained NDK clang driver that already knows the sysroot.
     export LD="${CC}" AS="${CC}"
-    "${s}/configure" \
+    ./configure \
       --target="${target}" \
       --prefix="${PREFIX}" --libdir="${PREFIX}/lib" \
       --enable-static --disable-shared --enable-pic \
