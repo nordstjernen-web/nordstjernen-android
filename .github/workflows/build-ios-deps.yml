@@ -116,7 +116,8 @@ jobs:
                    freetype2 libpng harfbuzz fontconfig pixman-1 fribidi \
                    cairo pango pangocairo libcrypto libssl libnghttp2 \
                    libbrotlidec libbrotlienc libbrotlicommon \
-                   libcurl sqlite3 uchardet libpsl libwebp; do
+                   libcurl sqlite3 uchardet libpsl libwebp \
+                   ogg vorbis vorbisfile opus dav1d; do
             pkg-config --exists "$m" && echo "ok   $m $(pkg-config --modversion "$m")" \
                                      || { echo "MISSING $m"; exit 1; }
           done
