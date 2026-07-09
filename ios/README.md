@@ -54,6 +54,11 @@ order:
 - **Network:** OpenSSL (libcrypto + libssl), nghttp2, brotli (libcurl decodes
   `Content-Encoding: br`), libcurl (HTTP/2 + brotli)
 - **Misc:** sqlite3, uchardet, libpsl, libwebp
+- **Media (`<video>`/`<audio>`):** libogg, libvorbis, opus, dav1d — the open-web
+  decode stack Firefox vendors (AV1 via dav1d; Opus and Vorbis audio; Ogg
+  framing), built static like the rest of the iOS sysroot. H.264/HEVC/AAC come
+  from the OS (VideoToolbox/AudioToolbox), so they are not built here; libvpx
+  (VP8/VP9) is a documented follow-up.
 
 > `lexbor`, `quickjs-ng`, `WAMR` and `Wuffs` are **not** built here — they are
 > vendored in the engine tree and compiled together with the engine.

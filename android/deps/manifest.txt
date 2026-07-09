@@ -58,6 +58,25 @@ uchardet    0.0.8     e97a60cfc00a1c147a674b097bb1422abd9fa78a2d9ce3f3fdcc2e78a3
 libpsl      0.21.5    1dcc9ceae8b128f3c0b3f654decd0e1e891afc6ff81098f227ef260449dae208  https://github.com/rockdaboot/libpsl/releases/download/0.21.5/libpsl-0.21.5.tar.gz
 libwebp     1.6.0     e4ab7009bf0629fd11982d4c2aa83964cf244cffba7347ecd39019a9e38c4564  https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0.tar.gz
 
+# --- Media (video / audio codecs) -------------------------------------------
+# The open-web media stack the engine needs to decode <video>/<audio>: the same
+# royalty-free codecs Firefox vendors in mozilla-central (media/libdav1d,
+# media/libopus, media/libogg, media/libvorbis). Firefox pins these to specific
+# upstream revisions; we pin the latest upstream *stable release* (>= Firefox's
+# revision in every case, so we carry its security fixes). Codecs are the browser
+# attack surface most exposed to hostile input, hence exact version + sha256
+# pins. libvpx (VP8/VP9) is deliberately not here yet: its bespoke,
+# ffmpeg-style configure needs a custom cross wrapper (see README) and its own
+# CI-verified change.
+#   ogg     -> container framing        (dav1d/opus/vorbis are the codecs)
+#   vorbis  -> Vorbis audio  (needs ogg; find_package(Ogg) resolves in-prefix)
+#   opus    -> Opus audio    (WebM/Ogg; OPUS_HARDENING stays on by default)
+#   dav1d   -> AV1 video decode (Firefox's AV1 decoder; decode-only by design)
+libogg      1.3.6     83e6704730683d004d20e21b8f7f55dcb3383cdf84c0daedf30bde175f774638  https://github.com/xiph/ogg/releases/download/v1.3.6/libogg-1.3.6.tar.gz
+libvorbis   1.3.7     b33cc4934322bcbf6efcbacf49e3ca01aadbea4114ec9589d1b1e9d20f72954b  https://github.com/xiph/vorbis/releases/download/v1.3.7/libvorbis-1.3.7.tar.xz
+opus        1.6.1     6ffcb593207be92584df15b32466ed64bbec99109f007c82205f0194572411a1  https://github.com/xiph/opus/releases/download/v1.6.1/opus-1.6.1.tar.gz
+dav1d       1.5.3     e099f53253f6c247580c554d53a13f1040638f2066edc3c740e4c2f15174ce22  https://code.videolan.org/videolan/dav1d/-/archive/1.5.3/dav1d-1.5.3.tar.bz2
+
 # --- On-device inference ----------------------------------------------------
 # llama.cpp (libllama + ggml) for the engine's on-device LLM features. Pinned to
 # an upstream release-build tag (bNNNN); bump deliberately and re-verify sha256.

@@ -53,7 +53,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential cmake ninja-build pkg-config \
             autoconf automake libtool gettext gperf ccache \
-            bison flex texinfo
+            bison flex texinfo nasm
           # Recent Meson/Ninja from PyPI (Ubuntu's are often too old for glib).
           python -m pip install --upgrade pip
           python -m pip install 'meson>=1.5.0' ninja
@@ -130,7 +130,8 @@ jobs:
                    freetype2 libpng harfbuzz fontconfig pixman-1 fribidi \
                    cairo pango pangocairo libcrypto libssl libnghttp2 \
                    libbrotlidec libbrotlienc libbrotlicommon \
-                   libcurl sqlite3 uchardet libpsl libwebp; do
+                   libcurl sqlite3 uchardet libpsl libwebp \
+                   ogg vorbis vorbisfile opus dav1d; do
             pkg-config --exists "$m" && echo "ok   $m $(pkg-config --modversion "$m")" \
                                      || { echo "MISSING $m"; exit 1; }
           done

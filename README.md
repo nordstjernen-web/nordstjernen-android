@@ -57,12 +57,35 @@ platform's manifest
 | Misc | uchardet | 0.0.8 | charset detection |
 | Misc | libpsl | 0.21.5 | public-suffix / cookie policy |
 | Misc | libwebp | 1.6.0 | WebP decode |
+| Media | libogg | 1.3.6 | Ogg container framing |
+| Media | libvorbis | 1.3.7 | Vorbis audio decode |
+| Media | opus | 1.6.1 | Opus audio decode |
+| Media | dav1d | 1.5.3 | AV1 video decode (Firefox's decoder) |
 | Android only | llama | b9632 | on-device LLM (libllama + ggml) |
 
 `llama.cpp` is built for **Android only** — mobile iOS does not ship the
 on-device AI feature. lexbor, QuickJS, WAMR and Wuffs are **not** listed here:
 they are vendored in the engine tree and compiled together with the engine, not
 as sysroot libraries.
+
+### Media codecs (`<video>` / `<audio>`)
+
+The **Media** group is the open-web decode stack the engine needs to play
+`<video>` and `<audio>`. It mirrors the royalty-free codecs Firefox vendors in
+mozilla-central (`media/libdav1d`, `media/libopus`, `media/libvorbis`,
+`media/libogg`): **dav1d** decodes AV1, **opus** and **libvorbis** decode the
+two open web audio codecs, and **libogg** provides Ogg container framing. Firefox
+pins these to specific upstream revisions; we pin the latest upstream *stable
+release* (≥ Firefox's revision in each case, so its security fixes are carried).
+`libvpx` (VP8/VP9) is a deliberate follow-up — its bespoke, ffmpeg-style
+`configure` needs a custom cross wrapper (with explicit 16 KB page-size link
+plumbing and `yasm`/`nasm`) and its own CI-verified change. On mobile the
+platform still supplies H.264/HEVC/AAC (Android `MediaCodec`, iOS
+VideoToolbox/AudioToolbox); only the codecs the OS does *not* reliably provide
+are built here. These codecs are the browser's most exposed hostile-input
+surface, so — like every other dependency — each is pinned by exact version and
+verified `sha256`. On **desktop Linux** the engine links the distro's media
+libraries, so the GTK overlay does not build them.
 
 ## Quick start
 

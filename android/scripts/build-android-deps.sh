@@ -221,6 +221,42 @@ dep_libwebp() {
     -DWEBP_BUILD_LIBWEBPMUX=ON
 }
 
+# --- Media (video / audio codecs) ------------------------------------------
+# The open-web decode stack for <video>/<audio>: the same royalty-free codecs
+# Firefox vendors (dav1d/opus/vorbis/ogg). Built shared like the rest of the
+# Android sysroot; the meson cross-file and build_cmake both inject the 16 KB
+# max-page-size link flag, so these .so files stay Play-compliant.
+
+dep_libogg() {
+  local s; s="$(fetch_source libogg)"
+  # Container framing used by Vorbis/Opus/Theora. Installs ogg.pc and the CMake
+  # package config (OggConfig.cmake) that libvorbis's find_package(Ogg) needs.
+  build_cmake "${s}" -DBUILD_TESTING=OFF -DINSTALL_DOCS=OFF
+}
+
+dep_libvorbis() {
+  local s; s="$(fetch_source libvorbis)"
+  # find_package(Ogg REQUIRED) resolves against the just-built libogg via
+  # CMAKE_PREFIX_PATH=${PREFIX}. Installs libvorbis/enc/file + their .pc files.
+  build_cmake "${s}"
+}
+
+dep_opus() {
+  local s; s="$(fetch_source opus)"
+  # Opus honours the standard BUILD_SHARED_LIBS (ON here from build_cmake) and
+  # keeps OPUS_HARDENING on by default. No external assembler: SIMD is via
+  # compiler intrinsics with runtime CPU detection.
+  build_cmake "${s}" -DOPUS_BUILD_TESTING=OFF -DOPUS_BUILD_PROGRAMS=OFF
+}
+
+dep_dav1d() {
+  local s; s="$(fetch_source dav1d)"
+  # AV1 decoder (Firefox's). Drop the CLI tool, tests and examples; keep asm
+  # (arm64 is assembled by clang, x86_64 needs nasm -- installed in CI).
+  build_meson "${s}" \
+    -Denable_tools=false -Denable_tests=false -Denable_examples=false
+}
+
 dep_curl() {
   local s; s="$(fetch_source curl)"
   build_cmake "${s}" \
@@ -256,6 +292,7 @@ BUILD_PLAN=(
   cairo pango
   openssl nghttp2 brotli
   sqlite3 uchardet libpsl libwebp
+  libogg libvorbis opus dav1d
   curl
   llama
 )
